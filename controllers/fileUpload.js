@@ -1,4 +1,6 @@
+const { request } = require("express");
 const File = require("../models/Files");
+const cloudinary = require("cloudinary").v2;
 
 exports.localFileUpload = async (req, res) => {
   try {
@@ -7,7 +9,8 @@ exports.localFileUpload = async (req, res) => {
 
     console.log("file aa gya", file);
 
-    let path = __dirname + "/files/" + Date.now() + `.${file.name.split(".") [1]}`;
+    let path =
+      __dirname + "/files/" + Date.now() + `.${file.name.split(".")[1]}`;
     console.log("path", path);
 
     // move file to folder
@@ -26,5 +29,58 @@ exports.localFileUpload = async (req, res) => {
   } catch (e) {
     console.error(e);
     res.status(500).json({ message: "Server Error" });
+  }
+};
+
+function isFileSupported(fileType, supportedTypes) {
+  return supportedTypes.includes(fileType);
+}
+
+async function uploadFile(file, folder) {
+  const options = { folder };
+  await cloudinary.uploader.upload(file.tempFilePath, options);
+}
+
+exports.imageUpload = async (req, res) => {
+  try {
+    const { name, tags, email } = req.body;
+    console.log("body", req.body);
+
+    const file = req.files.imageFile;
+    // console.log("file", file);
+
+    const supportedTypes = ["png", "jpg", "jpeg"];
+
+    const fileType = file.name.split(".")[1].toLowerCase();
+
+    console.log("fileType", fileType);
+
+    if (!isFileSupported(fileType, supportedTypes)) {
+      return res.status(400).json({
+        success: false,
+        message: "File type not supported",
+      });
+    }
+
+    const response = await uploadFile(file, "File_upload");
+
+    // const fileData = await File.create({
+    //   name,
+    //   tags,
+    //   email,
+    //   imageUrl,
+    // })
+
+    res.status(200).json({
+      success: true,
+      message: "File Uploaded Successfully",
+      data: response,
+    });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({
+      success: false,
+      message: "Server Error",
+    });
   }
 };
